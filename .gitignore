@@ -1,0 +1,28 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+
+# Garmin auth tokens
+.garth/
+
+# Node
+node_modules/
+dist/
+.next/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
