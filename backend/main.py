@@ -1,14 +1,30 @@
 import hashlib
 import os
+from contextlib import asynccontextmanager
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from db.database import init_db
+from routes.glucose import router as glucose_router
+from routes.insulin import router as insulin_router
+from routes.carbs import router as carbs_router
+from routes.site_changes import router as site_changes_router
+from routes.activities import router as activities_router
+from routes.annotations import router as annotations_router
+
 load_dotenv()
 
-app = FastAPI(title="BGConnect API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="BGConnect API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,6 +32,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(glucose_router, prefix="/api")
+app.include_router(insulin_router, prefix="/api")
+app.include_router(carbs_router, prefix="/api")
+app.include_router(site_changes_router, prefix="/api")
+app.include_router(activities_router, prefix="/api")
+app.include_router(annotations_router, prefix="/api")
 
 
 @app.get("/health")
@@ -31,7 +54,7 @@ async def nightscout_health() -> dict:
 
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{url}/api/v1/entries",
+            f"{url}/api/v1/entries.json",
             headers={"api-secret": api_secret},
             params={"count": 1},
             timeout=10,

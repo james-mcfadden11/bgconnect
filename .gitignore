@@ -15,6 +15,9 @@ build/
 # Garmin auth tokens
 .garth/
 
+# SQLite database
+*.db
+
 # Node
 node_modules/
 dist/
