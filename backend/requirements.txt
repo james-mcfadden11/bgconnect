@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+garminconnect
+pydantic
+pytest
+pytest-asyncio
