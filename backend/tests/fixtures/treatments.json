@@ -1,0 +1,72 @@
+[
+  {
+    "_id": "69a47df6db27600cee038895",
+    "eventType": "Temp Basal",
+    "reason": "Algorithm",
+    "duration": 0,
+    "absolute": 0.7,
+    "rate": 0.7,
+    "created_at": "2026-03-01T17:43:20.000Z",
+    "enteredBy": "Pump (tconnectsync)",
+    "pump_event_id": "297943",
+    "utcOffset": -300,
+    "mills": 1772387000000,
+    "carbs": null,
+    "insulin": null
+  },
+  {
+    "eventType": "Temp Basal",
+    "reason": "Algorithm",
+    "duration": 5,
+    "absolute": 0.7,
+    "rate": 0.7,
+    "created_at": "2026-03-01T17:38:20.000Z",
+    "enteredBy": "Pump (tconnectsync)",
+    "pump_event_id": "297933",
+    "utcOffset": -300,
+    "_id": "69a47df6db27600cee038893",
+    "mills": 1772386700000,
+    "carbs": null,
+    "insulin": null
+  },
+  {
+    "eventType": "Combo Bolus",
+    "created_at": "2026-03-01T17:27:17.000Z",
+    "carbs": 40,
+    "insulin": 1.7,
+    "notes": "Standard Bolus (Override)",
+    "enteredBy": "Pump (tconnectsync)",
+    "pump_event_id": "297904,297880,297881,297882",
+    "glucose": 82,
+    "utcOffset": -300,
+    "_id": "69a47df6db27600cee038898",
+    "mills": 1772386037000
+  },
+  {
+    "eventType": "Combo Bolus",
+    "created_at": "2026-03-01T15:35:20.000Z",
+    "carbs": 15,
+    "insulin": 1.5,
+    "notes": "BLE Standard Bolus",
+    "enteredBy": "Pump (tconnectsync)",
+    "pump_event_id": "297641,297624,297625,297626",
+    "glucose": 103,
+    "utcOffset": -300,
+    "_id": "69a4609edb27600cee0379c9",
+    "mills": 1772379320000
+  },
+  {
+    "eventType": "Sleep",
+    "reason": "Sleep (Scheduled)",
+    "notes": "Sleep (Scheduled)",
+    "duration": 511,
+    "created_at": "2026-03-01T04:00:53.000Z",
+    "enteredBy": "Pump (tconnectsync)",
+    "pump_event_id": "295862,297113",
+    "utcOffset": 0,
+    "_id": "69a44344db27600cee036b29",
+    "mills": 1772337653000,
+    "carbs": null,
+    "insulin": null
+  }
+]
