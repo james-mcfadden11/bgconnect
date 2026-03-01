@@ -42,10 +42,14 @@ ACTIVITY_NO_OPTIONALS = {
 HEART_RATE = {
     "restingHeartRate": 52,
     "maxHeartRate": 179,
-    "minHeartRate": 45,
+    "heartRateValues": [
+        [1772341200000, 72],
+        [1772341320000, 68],
+        [1772341440000, None],  # null value — should be skipped
+    ],
 }
 
-HEART_RATE_NO_DATA = {}
+HEART_RATE_NO_DATA = {"heartRateValues": []}
 
 SLEEP = {
     "dailySleepDTO": {
@@ -118,22 +122,29 @@ class TestNormalizeActivity:
 # -------------------------------------------------------------------------
 
 class TestNormalizeHeartRate:
+    def test_returns_list_of_readings(self):
+        readings = GarminConnector._normalize_heart_rate(HEART_RATE, USER_ID)
+        assert isinstance(readings, list)
+
+    def test_null_bpm_values_skipped(self):
+        readings = GarminConnector._normalize_heart_rate(HEART_RATE, USER_ID)
+        assert len(readings) == 2  # third sample has None bpm — skipped
+
     def test_basic_fields(self):
-        hr = GarminConnector._normalize_heart_rate(HEART_RATE, TODAY, USER_ID)
-        assert hr is not None
-        assert hr.id == f"hr-{TODAY.isoformat()}"
-        assert hr.user_id == USER_ID
-        assert hr.resting_hr == 52
-        assert hr.max_hr == 179
-        assert hr.source == "garmin"
+        reading = GarminConnector._normalize_heart_rate(HEART_RATE, USER_ID)[0]
+        assert reading.id == "hr-1772341200000"
+        assert reading.user_id == USER_ID
+        assert reading.bpm == 72
+        assert reading.source == "garmin"
 
-    def test_date_stored_as_iso_string(self):
-        hr = GarminConnector._normalize_heart_rate(HEART_RATE, TODAY, USER_ID)
-        assert hr.date == "2026-02-28"
+    def test_timestamp_is_utc(self):
+        from datetime import timezone
+        reading = GarminConnector._normalize_heart_rate(HEART_RATE, USER_ID)[0]
+        assert reading.timestamp.tzinfo == timezone.utc
 
-    def test_missing_resting_hr_returns_none(self):
-        result = GarminConnector._normalize_heart_rate(HEART_RATE_NO_DATA, TODAY, USER_ID)
-        assert result is None
+    def test_empty_data_returns_empty_list(self):
+        result = GarminConnector._normalize_heart_rate(HEART_RATE_NO_DATA, USER_ID)
+        assert result == []
 
 
 # -------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from garminconnect import Garmin
 
 from models.activity import ActivitySession
-from models.heart_rate import HeartRateDay
+from models.heart_rate import HeartRateReading
 from models.sleep import SleepRecord
 from models.stress import StressDay
 
@@ -54,15 +54,13 @@ class GarminConnector:
 
     async def fetch_heart_rate(
         self, user_id: str, start: datetime, end: datetime
-    ) -> list[HeartRateDay]:
+    ) -> list[HeartRateReading]:
         client = self._get_client()
         results = []
         for d in _date_range(start.date(), end.date()):
             data = await asyncio.to_thread(client.get_heart_rates, d.isoformat())
-            record = self._normalize_heart_rate(data, d, user_id)
-            if record is not None:
-                results.append(record)
-        return results
+            results.extend(self._normalize_heart_rate(data, user_id))
+        return [r for r in results if start <= r.timestamp <= end]
 
     async def fetch_sleep(
         self, user_id: str, start: datetime, end: datetime
@@ -119,20 +117,21 @@ class GarminConnector:
         )
 
     @staticmethod
-    def _normalize_heart_rate(
-        data: dict, d: date_type, user_id: str
-    ) -> Optional[HeartRateDay]:
-        resting = data.get("restingHeartRate")
-        if resting is None:
-            return None
-        return HeartRateDay(
-            id=f"hr-{d.isoformat()}",
-            user_id=user_id,
-            date=d.isoformat(),
-            resting_hr=int(resting),
-            max_hr=data.get("maxHeartRate"),
-            source="garmin",
-        )
+    def _normalize_heart_rate(data: dict, user_id: str) -> list[HeartRateReading]:
+        readings = []
+        for item in data.get("heartRateValues") or []:
+            if not item or len(item) < 2 or item[1] is None:
+                continue
+            timestamp_ms, bpm = item[0], item[1]
+            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            readings.append(HeartRateReading(
+                id=f"hr-{timestamp_ms}",
+                user_id=user_id,
+                timestamp=timestamp,
+                bpm=int(bpm),
+                source="garmin",
+            ))
+        return readings
 
     @staticmethod
     def _normalize_sleep(

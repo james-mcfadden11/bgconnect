@@ -1,11 +1,10 @@
-from typing import Optional
+from datetime import datetime
 from pydantic import BaseModel
 
 
-class HeartRateDay(BaseModel):
+class HeartRateReading(BaseModel):
     id: str
     user_id: str
-    date: str        # ISO date string YYYY-MM-DD
-    resting_hr: int
-    max_hr: Optional[int]
+    timestamp: datetime  # UTC
+    bpm: int
     source: str

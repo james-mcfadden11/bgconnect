@@ -14,6 +14,7 @@ from routes.carbs import router as carbs_router
 from routes.site_changes import router as site_changes_router
 from routes.activities import router as activities_router
 from routes.annotations import router as annotations_router
+from routes.heart_rate import router as heart_rate_router
 
 load_dotenv()
 
@@ -39,6 +40,7 @@ app.include_router(carbs_router, prefix="/api")
 app.include_router(site_changes_router, prefix="/api")
 app.include_router(activities_router, prefix="/api")
 app.include_router(annotations_router, prefix="/api")
+app.include_router(heart_rate_router, prefix="/api")
 
 
 @app.get("/health")
