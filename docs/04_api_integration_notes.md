@@ -1,12 +1,13 @@
 # API Integration Notes
 
-*BGConnect | Version 1.2 | February 2026*
+*BGConnect | Version 1.3 | March 2026*
 
 ## Data Pipeline Architecture
 
 ```
 Tandem Source  →  tconnectsync  →  Nightscout  →  BGConnect
 Dexcom G7      →  Dexcom Share  →  Nightscout  →  BGConnect
+Garmin Connect →  python-garminconnect          →  BGConnect (future)
 ```
 
 ---
@@ -21,48 +22,51 @@ Nightscout is an open source, self-hosted diabetes data platform with a REST API
 ### Authentication
 - Nightscout uses an `API_SECRET` token for authentication
 - API calls include the header: `api-secret: <sha1(API_SECRET)>`
-- For multi-user phase 2, each user provides their own Nightscout URL and API secret
+- The raw secret is stored in `backend/.env` and hashed by the connector on each request
 
 ### Key Endpoints
 
+All endpoints require the `.json` suffix to return JSON. Without it, Nightscout returns tab-separated text.
+
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| GET /api/v1/entries | GET | CGM readings (SGV entries) |
-| GET /api/v1/treatments | GET | Boluses, basals, site changes, notes |
+| GET /api/v1/entries.json | GET | CGM readings (SGV entries) |
+| GET /api/v1/treatments.json | GET | Boluses, basals, site changes, notes |
+| GET /api/v1/devicestatus.json | GET | Pump status, IOB, reservoir level |
 | GET /api/v1/profile | GET | Insulin profile (basal rates, ratios, ISF) |
 | POST /api/v1/treatments | POST | Create a treatment (used for annotations) |
-| GET /api/v1/devicestatus | GET | Pump status, IOB, reservoir level |
 
 ### Query Parameters
-- `count` — number of records to return
-- `find[dateString][$gte]` — start date filter
-- `find[dateString][$lte]` — end date filter
-- `find[eventType]` — filter treatments by type (e.g. Site Change, Bolus)
+- `count` — max records to return (set to 10000 for date range queries)
+- `find[dateString][$gte]` / `find[dateString][$lte]` — date filter for entries
+- `find[created_at][$gte]` / `find[created_at][$lte]` — date filter for treatments and devicestatus
+- `find[eventType]` — filter treatments by type
 
-### Data Types Available via Nightscout
-- **SGV** — CGM readings from Dexcom G7 via Dexcom Share
-- **Bolus** — bolus doses from t:slim via tconnectsync
-- **Temp Basal** — temporary basal rate changes
-- **Site Change** — infusion set change events (note: location not captured, must be annotated manually)
-- **Cannula Fill, Cartridge Change** — pump maintenance events
-- **Profile** — basal rates, carb ratios, insulin sensitivity factors
+### Treatment Event Types (as synced by tconnectsync)
 
-### Important Notes
-- Site Change events confirm a change occurred but do not capture location — location must be logged as an annotation in BGConnect
-- All timestamps should be normalized to UTC on ingest
-- Nightscout's `dateString` is local-time — handle timezone carefully
-- Implement exponential backoff — Nightscout instances may be self-hosted on modest hardware
+| Event Type | Data | Notes |
+|------------|------|-------|
+| Combo Bolus | insulin, carbs | Tandem's bolus type — covers meal and correction boluses |
+| Temp Basal | rate, absolute, duration | Control-IQ algorithm adjustments |
+| Sleep | duration | Control-IQ sleep mode — no insulin fields |
+| Site Change | — | Infusion site change; location not captured |
+
+> **Note:** Tandem via tconnectsync does not use the standard Nightscout event types (Bolus, Meal Bolus, Correction Bolus). All bolus events arrive as `Combo Bolus`.
 
 ### Connector Interface
 
-All future connectors must implement the same interface:
-
 ```python
-def fetch_glucose(user_id: str, start: datetime, end: datetime) -> List[GlucoseReading]
-def fetch_insulin(user_id: str, start: datetime, end: datetime) -> List[InsulinDose]
-def fetch_site_changes(user_id: str, start: datetime, end: datetime) -> List[SiteChange]
-def fetch_device_status(user_id: str, start: datetime, end: datetime) -> List[DeviceStatus]
+async def fetch_glucose(user_id: str, start: datetime, end: datetime) -> List[GlucoseReading]
+async def fetch_insulin(user_id: str, start: datetime, end: datetime) -> List[InsulinDose]
+async def fetch_carbs(user_id: str, start: datetime, end: datetime) -> List[CarbEntry]
+async def fetch_site_changes(user_id: str, start: datetime, end: datetime) -> List[SiteChange]
+async def fetch_device_status(user_id: str, start: datetime, end: datetime) -> List[DeviceStatus]
 ```
+
+### Known Limitations
+- Device status returns empty — tconnectsync does not push pump status to Nightscout
+- Site change location is not captured in Nightscout — must be annotated manually in BGConnect
+- `dateString` in entries is local time; the connector uses the `date` millisecond timestamp instead for reliable UTC conversion
 
 ---
 
@@ -74,10 +78,10 @@ tconnectsync automatically syncs Tandem Source pump data to Nightscout by revers
 **Repo:** https://github.com/jwoglom/tconnectsync
 
 ### Data Synced to Nightscout
-- Basal data (scheduled, temp, and Control-IQ algorithm adjustments)
-- Bolus data (manual and correction boluses)
-- Pump events (cartridge change, cannula fill, alarms, sleep/exercise mode)
-- Insulin profiles (basal rates, carb ratios, correction factors)
+- Bolus data (as `Combo Bolus` events with insulin and carb amounts)
+- Temp basal rate changes (Control-IQ algorithm adjustments)
+- Control-IQ mode events (Sleep, Exercise)
+- Site change events
 
 ### Risk Notes
 - Uses Tandem's undocumented APIs — could break if Tandem changes their backend
@@ -96,15 +100,24 @@ Nightscout has a built-in Dexcom Share bridge configured via environment variabl
 ## Garmin (Priority 2 — Future)
 
 ### Overview
-Garmin activity, heart rate, sleep, and stress data via the Garmin Health API. Deferred until the Nightscout integration is stable and validated.
+Garmin activity, heart rate, sleep, and stress data via the `python-garminconnect` library. Deferred until after the dashboard MVP.
 
-### Key Notes
-- Requires applying to Garmin's developer program for API access
-- Uses OAuth 1.0a for authentication
-- Garmin Health API is webhook-based — Garmin pushes data to your endpoint on sync
-- This means a publicly accessible server endpoint is required (already have this)
-- Activity data maps to the `activity_sessions` normalized schema
-- No changes to BGConnect's core needed — add a new connector module only
+### Authentication Approach
+- The official Garmin Health API requires enterprise developer access — not available to individuals
+- `python-garminconnect` (cyberjunky) uses the same OAuth flow as the Garmin Connect mobile app, authenticating with email and password
+- Tokens are cached in `~/.garth` after first login
+- Credentials stored in `backend/.env` as `GARMIN_EMAIL` and `GARMIN_PASSWORD`
+- Connectivity confirmed working via `garmin_test.py`
+
+### Data Available
+- Activities (type, duration, distance, heart rate)
+- All-day heart rate
+- Sleep (duration, score, stages)
+- Stress levels
+
+### Docker Consideration
+- Token cache (`~/.garth`) must be accessible inside the backend container
+- Mount `~/.garth` as a volume or handle first-time auth before container startup
 
 ---
 
@@ -112,7 +125,7 @@ Garmin activity, heart rate, sleep, and stress data via the Garmin Health API. D
 
 | Source | Priority | Notes |
 |--------|----------|-------|
-| Garmin Health API | Medium | Activity, HR, sleep, stress — phase 2 |
+| Garmin (python-garminconnect) | Medium | Activity, HR, sleep, stress — after dashboard MVP |
 | Apple Health | Low | Activity and HR on iOS |
 | Tidepool | Low | Only viable if automatic Tandem sync is resolved |
 | Manual CSV import | Low | Useful for historical data backfill |

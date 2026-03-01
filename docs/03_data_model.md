@@ -42,12 +42,26 @@
 | id | UUID | Primary key |
 | user_id | UUID FK | References users.id |
 | timestamp | TIMESTAMPTZ | Dose delivery time (UTC) |
-| dose_type | VARCHAR | bolus, basal, correction |
-| units | NUMERIC | Insulin units delivered |
-| duration_minutes | INTEGER | For extended bolus or temp basal |
+| dose_type | VARCHAR | bolus, correction, temp_basal |
+| units | NUMERIC | Delivered units for bolus/correction; U/hr rate for temp_basal |
+| duration_minutes | INTEGER | Set for temp_basal; null for bolus |
 | source | VARCHAR | nightscout, manual |
 | source_id | VARCHAR | Dedup key |
-| metadata | JSONB | Extended pump data, IOB snapshot, etc. |
+| metadata | JSONB | event_type, carbs (if meal bolus), rate_u_per_hr (if temp_basal) |
+
+### carb_entries
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID | Primary key |
+| user_id | UUID FK | References users.id |
+| timestamp | TIMESTAMPTZ | Time of carb entry (UTC) |
+| carbs_grams | NUMERIC | Grams of carbohydrate |
+| source | VARCHAR | nightscout, manual |
+| source_id | VARCHAR | Dedup key |
+| notes | TEXT | Optional free text |
+
+> Carb entries are synced from the Tandem pump via tconnectsync as `Combo Bolus` treatments. A single Combo Bolus produces both an `InsulinDose` and a `CarbEntry`.
 
 ### site_changes
 

@@ -1,6 +1,6 @@
 # Development Roadmap
 
-*BGConnect | Version 1.3 | February 2026*
+*BGConnect | Version 1.4 | March 2026*
 
 ## ✓ Pre-Development: Infrastructure Setup — COMPLETE
 
@@ -22,34 +22,43 @@
 
 Goal: A working local stack that fetches data from Nightscout on demand and provides a web dashboard for exploration and analysis.
 
-### Milestone 1.1 — Project Setup ← CURRENT
+### ✓ Milestone 1.1 — Project Setup — COMPLETE
 
-- [ ] Apply for Garmin Health API developer access (approval can take time — do this first)
-- [ ] Initialize Git repository and push to GitHub
-- [ ] Define local Docker Compose stack: FastAPI + React dev server
-- [ ] Set up Python virtual environment and dependency management
-- [ ] Set up React + TypeScript frontend scaffolding
-- [ ] Configure environment variable management (.env + python-dotenv)
-- [ ] Verify local stack connects to Nightscout API at nightscout.bgconnect.io
+*Completed March 1, 2026*
 
-### Milestone 1.2 — Nightscout Connector
+- ✓ Confirmed Garmin data access via python-garminconnect (official Garmin Health API is enterprise-only)
+- ✓ Initialized Git repository and pushed to GitHub (james-mcfadden11/bgconnect)
+- ✓ Defined local Docker Compose stack: FastAPI backend + Vite/React dev server
+- ✓ Set up Python dependency management via requirements.txt in Docker
+- ✓ Set up React + TypeScript frontend scaffolding with Vite
+- ✓ Configured environment variable management (backend/.env + python-dotenv)
+- ✓ Verified local stack connects to Nightscout API at nightscout.bgconnect.io
 
-- [ ] Implement Nightscout API client (auth, base request handling, error/retry logic)
-- [ ] Implement connector interface: fetch_glucose, fetch_insulin, fetch_site_changes, fetch_device_status
-- [ ] Implement normalization layer (Nightscout format -> internal schema)
-- [ ] Write unit tests for normalization logic using fixture data from live Nightscout instance
+### ✓ Milestone 1.2 — Nightscout Connector — COMPLETE
 
-### Milestone 1.3 — Garmin Connector
+*Completed March 1, 2026*
 
-- [ ] Implement Garmin API client (OAuth, base request handling, error/retry logic)
+- ✓ Implemented Nightscout API client (auth, base request handling, error handling)
+- ✓ Implemented connector interface: fetch_glucose, fetch_insulin, fetch_carbs, fetch_site_changes, fetch_device_status
+- ✓ Implemented normalization layer (Nightscout format -> internal schema)
+- ✓ Added CarbEntry model and fetch_carbs — carb data synced from Tandem via tconnectsync
+- ✓ Handles Tandem-specific event types: Combo Bolus, Temp Basal, Sleep (Control-IQ)
+- ✓ 33 unit tests against live fixture data — all passing
+- ✓ End-to-end verified: 496 glucose readings, 523 insulin doses, 15 carb entries over 2-day window
+
+### Milestone 1.3 — Garmin Connector ← CURRENT
+
+- [ ] Implement Garmin connector using python-garminconnect (cyberjunky library)
 - [ ] Implement connector interface: fetch_activities, fetch_heart_rate, fetch_sleep, fetch_stress
 - [ ] Map Garmin activity data to normalized activity schema
 - [ ] Write unit tests for normalization logic using fixture data from live Garmin account
+- [ ] Handle OAuth token storage for Docker environment (~/.garth)
 
 ### Milestone 1.4 — FastAPI Routes
 
 - [ ] GET /glucose — normalized CGM readings for a date range
-- [ ] GET /insulin — bolus and basal data for a date range
+- [ ] GET /insulin — bolus, correction, and temp basal data for a date range
+- [ ] GET /carbs — carb entries for a date range
 - [ ] GET /site-changes — site change events
 - [ ] GET /activities — Garmin activity data for a date range
 - [ ] GET /annotations — manually logged annotations
@@ -59,7 +68,8 @@ Goal: A working local stack that fetches data from Nightscout on demand and prov
 
 - [ ] BG trend chart: time-series line chart for CGM readings
 - [ ] Overlay insulin doses on the BG chart
-- [ ] Activity overlay on the BG trend chart (exercise events, heart rate)
+- [ ] Overlay carb entries on the BG chart
+- [ ] Activity overlay on BG trend chart (exercise events, heart rate)
 - [ ] Date range picker
 - [ ] Site change markers on the timeline
 - [ ] Manual annotation entry form (category, value, notes, timestamp)
@@ -120,4 +130,4 @@ Introduce PostgreSQL if performance or offline access becomes a genuine requirem
 | Primary data backend | Nightscout REST API (nightscout.bgconnect.io) |
 | Pump data bridge | tconnectsync (Tandem Source -> Nightscout) |
 | CGM data bridge | Dexcom Share -> Nightscout bridge |
-| Activity data | Garmin Health API |
+| Activity data | python-garminconnect (unofficial OAuth wrapper) |
